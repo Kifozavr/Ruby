@@ -1,0 +1,768 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Плотность борозд</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#E5E7E8; --surface:#FBFBFA; --surface-2:#EFF0F0; --sunk:#DEE1E2;
+  --ink:#0F1113; --ink-2:#464C52; --muted:#767D84;
+  --line:#C7CCD0; --line-2:#DCDFE1;
+  --accent:#C13F2C; --ok:#1C7355; --warn:#96600B; --live:#17915E;
+  --art-bg:#FFFFFF; --art-line:#E2E5E6;
+  --shadow:0 1px 0 rgba(16,18,20,.04), 0 12px 28px -18px rgba(16,18,20,.5);
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121416; --surface:#1A1D20; --surface-2:#212529; --sunk:#0D0F11;
+    --ink:#E9EBEC; --ink-2:#B4BABF; --muted:#848C93;
+    --line:#2F3539; --line-2:#242A2E;
+    --accent:#FF7059; --ok:#41BE93; --warn:#D8A241; --live:#3DBE8A;
+    --art-bg:#F7F7F5; --art-line:#DCDEDD;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 16px 34px -20px #000;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121416; --surface:#1A1D20; --surface-2:#212529; --sunk:#0D0F11;
+  --ink:#E9EBEC; --ink-2:#B4BABF; --muted:#848C93;
+  --line:#2F3539; --line-2:#242A2E;
+  --accent:#FF7059; --ok:#41BE93; --warn:#D8A241; --live:#3DBE8A;
+  --art-bg:#F7F7F5; --art-line:#DCDEDD;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 16px 34px -20px #000;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;padding:0 0 64px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+
+/* ---------- header ---------- */
+header.top{border-bottom:1px solid var(--line);background:var(--surface);}
+.top-in{max-width:1240px;margin:0 auto;padding:22px 24px 20px;display:flex;gap:24px;align-items:flex-end;
+  justify-content:space-between;flex-wrap:wrap}
+.eyebrow{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.025em;margin:6px 0 0;line-height:1.05;
+  text-wrap:balance}
+.lede{color:var(--ink-2);max-width:52ch;margin:8px 0 0;font-size:14.5px}
+.markstamp{flex:0 0 auto;display:flex;align-items:center;color:var(--ink)}
+.markstamp svg{display:block;height:38px;width:auto}
+
+/* ---------- layout ---------- */
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:24px;margin-top:24px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.card + .card{margin-top:16px}
+.card-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:12px 16px;border-bottom:1px solid var(--line-2)}
+.card-h h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.card-h .hint{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.card-b{padding:16px}
+
+/* ---------- artboard ---------- */
+.stage{background:var(--art-bg);border:1px solid var(--line);border-radius:3px;padding:28px 24px 20px;
+  display:flex;flex-direction:column;align-items:center;gap:18px;min-height:420px;justify-content:center;
+  box-shadow:var(--shadow);position:relative;overflow:auto}
+.stage.inv{background:#0B0C0D}
+.stage svg{display:block}
+.ruler{width:100%;max-width:520px;display:flex;flex-direction:column;gap:5px;align-items:center;color:#7A8085}
+.ruler-bar{height:9px;width:100%;position:relative;border-left:1px solid currentColor;border-right:1px solid currentColor}
+.ruler-bar i{position:absolute;top:0;bottom:0;border-left:1px solid currentColor;opacity:.55}
+.ruler-bar u{position:absolute;left:0;right:0;top:50%;border-top:1px solid currentColor;opacity:.55}
+.ruler-lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em}
+.stage-foot{display:flex;gap:16px;align-items:center;justify-content:space-between;width:100%;
+  font-family:var(--mono);font-size:11px;color:#7A8085;flex-wrap:wrap}
+
+/* ---------- mini preview ---------- */
+.minipv{display:flex;gap:14px;align-items:stretch;border:1px solid var(--line-2);border-radius:2px;
+  background:var(--surface-2);padding:10px;margin-bottom:18px}
+.minipv-art{background:var(--art-bg);border:1px solid var(--art-line);border-radius:2px;
+  display:flex;align-items:center;justify-content:center;padding:9px 14px;flex:0 0 auto}
+.minipv.inv .minipv-art{background:#0B0C0D;border-color:#2A2D2F}
+.minipv-art svg{display:block;height:74px;width:auto}
+.minipv-read{display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0}
+.minipv-n{display:flex;align-items:baseline;gap:7px}
+.minipv-n b{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1;letter-spacing:-.02em;
+  transition:color .18s ease}
+.minipv-n b.live{color:var(--live)}
+.minipv-n b.hot{color:var(--accent)}
+.minipv-n span{font-size:13px;color:var(--ink-2)}
+.minipv-meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.55}
+.minipv-meta em{font-style:normal;color:var(--ink-2)}
+@media (prefers-reduced-motion:reduce){.minipv-n b{transition:none}}
+
+/* ---------- controls ---------- */
+.field{display:flex;flex-direction:column;gap:7px}
+.field + .field{margin-top:16px}
+label.lab{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.sizerow{display:flex;align-items:baseline;gap:8px}
+input[type=number],select,input[type=text]{font-family:var(--mono);font-size:14px;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line);border-radius:2px;padding:8px 10px;width:100%}
+.sizerow input[type=number]{font-size:30px;font-weight:500;padding:2px 10px 4px;width:130px;letter-spacing:-.01em}
+.sizerow .unit{font-family:var(--mono);font-size:14px;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--live);margin:2px 0 0}
+input[type=range].hot{accent-color:var(--accent)}
+.band{height:4px;border-radius:2px;margin-top:7px;background:var(--line)}
+.bandlab{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:10px;
+  color:var(--muted);margin-top:5px;letter-spacing:.02em}
+.bandlab b{font-weight:500;color:var(--ink-2)}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{display:flex;align-items:center;gap:8px;padding:7px 11px 7px 8px;border:1px solid var(--line);
+  border-radius:2px;background:transparent;cursor:pointer;font-family:var(--sans);font-size:13px;color:var(--ink-2)}
+.sw i{width:16px;height:16px;border-radius:2px;border:1px solid rgba(128,128,128,.35);display:block}
+.sw em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.sw[aria-pressed=true]{border-color:var(--ink);color:var(--ink)}
+.sw[aria-pressed=true] em{color:var(--ink-2)}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.chip{font-family:var(--mono);font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:2px;
+  background:transparent;color:var(--ink-2);cursor:pointer}
+.chip:hover{border-color:var(--ink-2);color:var(--ink)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden;width:max-content}
+.seg button{font-family:var(--sans);font-size:12.5px;font-weight:500;padding:6px 14px;border:0;background:transparent;
+  color:var(--ink-2);cursor:pointer}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.stepper{display:flex;align-items:center;gap:10px;margin-top:9px}
+.stepper button{width:30px;height:30px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);
+  border-radius:2px;font-size:16px;line-height:1;cursor:pointer;font-family:var(--mono)}
+.stepper button:disabled{opacity:.35;cursor:default}
+.stepper .val{font-family:var(--mono);font-size:22px;font-weight:500;min-width:2.2ch;text-align:center}
+.stepper .cap{font-size:12.5px;color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- spec table ---------- */
+table.spec{width:100%;border-collapse:collapse;font-size:13px}
+table.spec th{text-align:left;font-weight:400;color:var(--ink-2);padding:7px 0;font-size:13px}
+table.spec td{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;padding:7px 0;font-weight:500}
+table.spec tr + tr th,table.spec tr + tr td{border-top:1px solid var(--line-2)}
+table.spec td small{font-family:var(--sans);color:var(--muted);font-weight:400;margin-left:6px;font-size:11px}
+.state{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;
+  padding:3px 7px;border-radius:2px;letter-spacing:.02em}
+.state.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.state.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.state.bad{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.note{font-size:12.5px;color:var(--ink-2);line-height:1.45;margin:14px 0 0;padding-left:11px;
+  border-left:2px solid var(--line)}
+.note.alert{border-left-color:var(--accent)}
+.note b{font-weight:600}
+
+/* ---------- derivation ---------- */
+.deriv{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.7;margin-top:12px;
+  background:var(--surface-2);border-radius:2px;padding:10px 12px}
+.deriv span{color:var(--ink-2)}
+.deriv .win{color:var(--ink);font-weight:600}
+
+/* ---------- export ---------- */
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:var(--sans);font-size:13.5px;font-weight:500;padding:9px 16px;border-radius:2px;cursor:pointer;
+  border:1px solid var(--ink);background:var(--ink);color:var(--surface)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn:hover{opacity:.86}
+.filename{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:10px;word-break:break-all}
+details.code{margin-top:14px}
+details.code summary{font-size:12px;color:var(--ink-2);cursor:pointer;font-family:var(--mono)}
+pre.svgsrc{background:var(--sunk);border:1px solid var(--line-2);border-radius:2px;padding:10px;
+  font-family:var(--mono);font-size:10.5px;line-height:1.45;max-height:190px;overflow:auto;margin:9px 0 0;
+  color:var(--ink-2);white-space:pre-wrap;word-break:break-all}
+
+/* ---------- identity strip ---------- */
+.strip{display:flex;gap:0;overflow-x:auto;padding:4px 0 2px}
+.spec-cell{flex:1 1 108px;min-width:108px;padding:18px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:12px;
+  border-right:1px solid var(--line-2)}
+.spec-cell:last-child{border-right:0}
+.spec-cell .art{background:var(--art-bg);border:1px solid var(--art-line);border-radius:2px;padding:12px 14px;
+  display:flex;align-items:center;justify-content:center;width:100%}
+.spec-cell .art svg{display:block;height:76px;width:auto}
+.spec-cell .cap{font-family:var(--mono);font-size:11px;text-align:center;line-height:1.5;color:var(--muted)}
+.spec-cell .cap b{display:block;color:var(--ink);font-weight:600;font-size:12.5px}
+
+/* ---------- law ---------- */
+.law{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0;margin-top:0}
+.law > div{padding:16px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.law h3{margin:0 0 6px;font-size:13px;font-weight:600;letter-spacing:-.01em}
+.law p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.5}
+.law code{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--surface-2);padding:1px 4px}
+details.adv{margin-top:16px}
+details.adv summary{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+  font-weight:600;cursor:pointer;padding:12px 16px}
+.advgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;padding:0 16px 16px}
+.advgrid .field + .field{margin-top:0}
+footer{color:var(--muted);font-size:12px;margin-top:28px;padding-top:16px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:var(--mono)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div>
+      <div class="eyebrow">РУБИТЕХ · производственный стандарт знака</div>
+      <h1>Плотность борозд</h1>
+      <p class="lede">Знак строится заново под каждый физический размер: силуэт, пропорции и оптическая
+        плотность остаются теми же, меняется только количество борозд и их шаг.</p>
+    </div>
+    <div class="markstamp"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-label="РУБИТЕХ" viewBox="0 0 366 67.050781"><defs><filter id="rb-filter-remove-color" x="0%" y="0%" width="100%" height="100%"><feColorMatrix color-interpolation-filters="sRGB" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0" /></filter><clipPath id="rb-clip-0"><path clip-rule="nonzero" d="M 85 17 L 363.445312 17 L 363.445312 50 L 85 50 Z M 85 17 "/></clipPath><clipPath id="rb-clip-1"><path clip-rule="nonzero" d="M 2.554688 0 L 63 0 L 63 66.113281 L 2.554688 66.113281 Z M 2.554688 0 "/></clipPath><clipPath id="rb-clip-2"><path clip-rule="nonzero" d="M 2.554688 0 L 363.445312 0 L 363.445312 66.113281 L 2.554688 66.113281 Z M 2.554688 0 "/></clipPath><clipPath id="rb-clip-3"><path clip-rule="nonzero" d="M 0.554688 0 L 61 0 L 61 66.113281 L 0.554688 66.113281 Z M 0.554688 0 "/></clipPath><clipPath id="rb-clip-4"><rect x="0" y="0" width="362" height="67"/></clipPath><g id="rb-source-13" clip-path="url(#rb-clip-4)"><g clip-path="url(#rb-clip-3)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 60.011719 45.382812 L 60.011719 20.730469 C 60.011719 17.773438 58.433594 15.011719 55.773438 13.433594 L 34.472656 1.109375 C 31.910156 -0.371094 28.65625 -0.371094 26.09375 1.109375 L 4.792969 13.433594 C 2.230469 14.914062 0.554688 17.675781 0.554688 20.730469 L 0.554688 45.382812 C 0.554688 48.339844 2.132812 51.101562 4.792969 52.679688 L 26.09375 65.003906 C 28.65625 66.484375 31.910156 66.484375 34.472656 65.003906 L 55.773438 52.679688 C 58.433594 51.199219 60.011719 48.4375 60.011719 45.382812 Z M 60.011719 45.382812 "/></g></g><mask id="rb-mask-0"><g filter="url(#rb-filter-remove-color)"><use xlink:href="#rb-source-13" transform="matrix(1, 0, 0, 1, 2, 0)"/></g></mask><clipPath id="rb-clip-5"><path clip-rule="nonzero" d="M 0.554688 0 L 361.445312 0 L 361.445312 66.113281 L 0.554688 66.113281 Z M 0.554688 0 "/></clipPath><clipPath id="rb-clip-6"><path clip-rule="nonzero" d="M 0.554688 0 L 62 0 L 62 50 L 0.554688 50 Z M 0.554688 0 "/></clipPath><clipPath id="rb-clip-7"><rect x="0" y="0" width="362" height="67"/></clipPath><g id="rb-source-9" clip-path="url(#rb-clip-7)"><g clip-path="url(#rb-clip-6)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 0.75 49.820312 L 61.984375 14.519531 L 61.984375 -4.511719 L -0.53125 -4.511719 Z M 0.75 49.820312 "/></g></g><mask id="rb-mask-1"><g filter="url(#rb-filter-remove-color)"><use xlink:href="#rb-source-9"/></g></mask><clipPath id="rb-clip-8"><path clip-rule="nonzero" d="M 0.554688 4 L 55 4 L 55 65 L 0.554688 65 Z M 0.554688 4 "/></clipPath><clipPath id="rb-clip-9"><path clip-rule="nonzero" d="M 0.554688 3 L 56 3 L 56 66 L 0.554688 66 Z M 0.554688 3 "/></clipPath><clipPath id="rb-clip-10"><path clip-rule="nonzero" d="M 0.554688 10 L 47 10 L 47 63 L 0.554688 63 Z M 0.554688 10 "/></clipPath><clipPath id="rb-clip-11"><path clip-rule="nonzero" d="M 0.554688 10 L 48 10 L 48 64 L 0.554688 64 Z M 0.554688 10 "/></clipPath><clipPath id="rb-clip-12"><path clip-rule="nonzero" d="M 0.554688 17 L 39 17 L 39 61 L 0.554688 61 Z M 0.554688 17 "/></clipPath><clipPath id="rb-clip-13"><path clip-rule="nonzero" d="M 0.554688 17 L 40 17 L 40 62 L 0.554688 62 Z M 0.554688 17 "/></clipPath><clipPath id="rb-clip-14"><path clip-rule="nonzero" d="M 0.554688 24 L 31 24 L 31 58 L 0.554688 58 Z M 0.554688 24 "/></clipPath><clipPath id="rb-clip-15"><path clip-rule="nonzero" d="M 0.554688 23 L 32 23 L 32 59 L 0.554688 59 Z M 0.554688 23 "/></clipPath><clipPath id="rb-clip-16"><path clip-rule="nonzero" d="M 0.554688 31 L 23 31 L 23 56 L 0.554688 56 Z M 0.554688 31 "/></clipPath><clipPath id="rb-clip-17"><path clip-rule="nonzero" d="M 0.554688 30 L 24 30 L 24 57 L 0.554688 57 Z M 0.554688 30 "/></clipPath><clipPath id="rb-clip-18"><path clip-rule="nonzero" d="M 0.554688 38 L 15 38 L 15 54 L 0.554688 54 Z M 0.554688 38 "/></clipPath><clipPath id="rb-clip-19"><path clip-rule="nonzero" d="M 0.554688 37 L 16 37 L 16 54 L 0.554688 54 Z M 0.554688 37 "/></clipPath><clipPath id="rb-clip-20"><path clip-rule="nonzero" d="M 0.554688 45 L 7 45 L 7 52 L 0.554688 52 Z M 0.554688 45 "/></clipPath><clipPath id="rb-clip-21"><path clip-rule="nonzero" d="M 0.554688 44 L 7 44 L 7 52 L 0.554688 52 Z M 0.554688 44 "/></clipPath><clipPath id="rb-clip-22"><rect x="0" y="0" width="362" height="67"/></clipPath><g id="rb-source-8" clip-path="url(#rb-clip-22)"><g clip-path="url(#rb-clip-8)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 27.375 64.90625 C 25.796875 64.90625 24.21875 64.511719 22.839844 63.722656 L 4.5 53.074219 C 1.738281 51.496094 -0.0351562 48.4375 -0.0351562 45.183594 L -0.0351562 23.984375 C -0.0351562 20.730469 1.738281 17.773438 4.5 16.097656 L 22.839844 5.445312 C 24.21875 4.660156 25.796875 4.265625 27.375 4.265625 C 28.953125 4.265625 30.53125 4.660156 31.910156 5.445312 L 50.25 16.097656 C 53.011719 17.675781 54.785156 20.730469 54.785156 23.984375 L 54.785156 45.183594 C 54.785156 48.4375 53.011719 51.398438 50.25 53.074219 L 31.910156 63.722656 C 30.53125 64.511719 28.953125 64.90625 27.375 64.90625 Z M 27.375 64.90625 "/></g><g clip-path="url(#rb-clip-9)"><path fill-rule="nonzero" fill="var(--surface)" fill-opacity="1" d="M 27.375 4.953125 C 28.855469 4.953125 30.234375 5.347656 31.613281 6.039062 L 49.957031 16.6875 C 52.519531 18.167969 54.195312 20.929688 54.195312 23.984375 L 54.195312 45.183594 C 54.195312 48.144531 52.617188 50.90625 49.957031 52.480469 L 31.613281 63.132812 C 30.332031 63.921875 28.855469 64.214844 27.375 64.214844 C 25.894531 64.214844 24.515625 63.820312 23.136719 63.132812 L 4.792969 52.480469 C 2.230469 51.003906 0.554688 48.242188 0.554688 45.183594 L 0.554688 23.984375 C 0.554688 21.027344 2.132812 18.265625 4.792969 16.6875 L 23.136719 6.039062 C 24.515625 5.347656 25.894531 4.953125 27.375 4.953125 Z M 27.375 3.574219 C 25.699219 3.574219 23.925781 4.066406 22.445312 4.855469 L 4.105469 15.503906 C 1.046875 17.28125 -0.824219 20.535156 -0.824219 23.984375 L -0.824219 45.183594 C -0.824219 48.636719 1.046875 51.890625 4.105469 53.664062 L 22.445312 64.316406 C 23.925781 65.203125 25.601562 65.597656 27.375 65.597656 C 29.050781 65.597656 30.824219 65.101562 32.304688 64.316406 L 50.644531 53.664062 C 53.703125 51.890625 55.574219 48.636719 55.574219 45.183594 L 55.574219 23.984375 C 55.574219 20.535156 53.703125 17.28125 50.644531 15.503906 L 32.304688 4.855469 C 30.824219 4.066406 29.148438 3.574219 27.375 3.574219 Z M 27.375 3.574219 "/></g><g clip-path="url(#rb-clip-10)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 23.332031 62.539062 C 21.953125 62.539062 20.570312 62.144531 19.289062 61.453125 L 4.003906 52.582031 C 1.539062 51.101562 -0.0351562 48.4375 -0.0351562 45.578125 L -0.0351562 27.929688 C -0.0351562 25.070312 1.539062 22.40625 4.003906 20.929688 L 19.289062 12.054688 C 20.472656 11.363281 21.953125 10.96875 23.332031 10.96875 C 24.710938 10.96875 26.09375 11.363281 27.375 12.054688 L 42.660156 20.929688 C 45.125 22.40625 46.703125 25.070312 46.703125 27.929688 L 46.703125 45.578125 C 46.703125 48.4375 45.125 51.101562 42.660156 52.582031 L 27.375 61.453125 C 26.191406 62.242188 24.8125 62.539062 23.332031 62.539062 Z M 23.332031 62.539062 "/></g><g clip-path="url(#rb-clip-11)"><path fill-rule="nonzero" fill="var(--surface)" fill-opacity="1" d="M 23.332031 11.757812 C 24.613281 11.757812 25.894531 12.054688 26.980469 12.746094 L 42.265625 21.621094 C 44.53125 22.902344 45.914062 25.367188 45.914062 28.027344 L 45.914062 45.679688 C 45.914062 48.339844 44.53125 50.707031 42.265625 52.089844 L 26.980469 60.960938 C 25.796875 61.652344 24.613281 61.949219 23.332031 61.949219 C 22.050781 61.949219 20.769531 61.652344 19.683594 60.960938 L 4.398438 52.089844 C 2.132812 50.804688 0.75 48.339844 0.75 45.679688 L 0.75 28.027344 C 0.75 25.367188 2.132812 23 4.398438 21.621094 L 19.683594 12.746094 C 20.867188 12.152344 22.050781 11.757812 23.332031 11.757812 Z M 23.332031 10.378906 C 21.753906 10.378906 20.277344 10.773438 18.992188 11.5625 L 3.710938 20.4375 C 1.046875 22.015625 -0.628906 24.875 -0.628906 28.027344 L -0.628906 45.679688 C -0.628906 48.835938 1.046875 51.695312 3.710938 53.269531 L 18.992188 62.144531 C 20.277344 62.933594 21.851562 63.328125 23.332031 63.328125 C 24.8125 63.328125 26.390625 62.933594 27.671875 62.144531 L 42.953125 53.269531 C 45.617188 51.695312 47.292969 48.835938 47.292969 45.679688 L 47.292969 28.027344 C 47.292969 24.875 45.617188 22.015625 42.953125 20.4375 L 27.671875 11.5625 C 26.390625 10.773438 24.910156 10.378906 23.332031 10.378906 Z M 23.332031 10.378906 "/></g><g clip-path="url(#rb-clip-12)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 19.386719 60.273438 C 18.203125 60.273438 16.921875 59.976562 15.839844 59.285156 L 3.613281 52.1875 C 1.441406 50.90625 0.0625 48.636719 0.0625 46.074219 L 0.0625 31.972656 C 0.0625 29.507812 1.441406 27.140625 3.613281 25.859375 L 15.839844 18.761719 C 16.921875 18.167969 18.105469 17.773438 19.386719 17.773438 C 20.667969 17.773438 21.851562 18.070312 22.9375 18.761719 L 35.164062 25.859375 C 37.332031 27.140625 38.714844 29.410156 38.714844 31.972656 L 38.714844 46.074219 C 38.714844 48.539062 37.332031 50.90625 35.164062 52.1875 L 22.9375 59.285156 C 21.753906 59.976562 20.570312 60.273438 19.386719 60.273438 Z M 19.386719 60.273438 "/></g><g clip-path="url(#rb-clip-13)"><path fill-rule="nonzero" fill="var(--surface)" fill-opacity="1" d="M 19.386719 18.5625 C 20.472656 18.5625 21.558594 18.859375 22.542969 19.449219 L 34.769531 26.550781 C 36.742188 27.632812 37.925781 29.804688 37.925781 32.070312 L 37.925781 46.171875 C 37.925781 48.441406 36.742188 50.511719 34.769531 51.695312 L 22.542969 58.792969 C 21.558594 59.386719 20.472656 59.679688 19.386719 59.679688 C 18.304688 59.679688 17.21875 59.386719 16.234375 58.792969 L 4.003906 51.695312 C 2.035156 50.609375 0.851562 48.441406 0.851562 46.171875 L 0.851562 32.070312 C 0.851562 29.804688 2.035156 27.734375 4.003906 26.550781 L 16.234375 19.449219 C 17.121094 18.859375 18.304688 18.5625 19.386719 18.5625 Z M 19.386719 17.183594 C 18.007812 17.183594 16.726562 17.578125 15.542969 18.265625 L 3.316406 25.367188 C 0.949219 26.746094 -0.53125 29.3125 -0.53125 32.070312 L -0.53125 46.171875 C -0.53125 48.933594 0.949219 51.496094 3.316406 52.878906 L 15.542969 59.976562 C 16.726562 60.667969 18.007812 61.0625 19.386719 61.0625 C 20.769531 61.0625 22.050781 60.667969 23.234375 59.976562 L 35.460938 52.878906 C 37.828125 51.496094 39.304688 48.933594 39.304688 46.171875 L 39.304688 32.070312 C 39.304688 29.3125 37.828125 26.746094 35.460938 25.367188 L 23.234375 18.265625 C 22.050781 17.578125 20.667969 17.183594 19.386719 17.183594 Z M 19.386719 17.183594 "/></g><g clip-path="url(#rb-clip-14)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 15.34375 57.902344 C 14.261719 57.902344 13.273438 57.609375 12.386719 57.117188 L 3.21875 51.789062 C 1.34375 50.707031 0.257812 48.734375 0.257812 46.566406 L 0.257812 35.914062 C 0.257812 33.746094 1.441406 31.773438 3.21875 30.6875 L 12.386719 25.363281 C 13.273438 24.871094 14.359375 24.574219 15.34375 24.574219 C 16.429688 24.574219 17.414062 24.871094 18.304688 25.363281 L 27.472656 30.6875 C 29.347656 31.773438 30.429688 33.746094 30.429688 35.914062 L 30.429688 46.566406 C 30.429688 48.734375 29.25 50.707031 27.472656 51.789062 L 18.304688 57.117188 C 17.414062 57.609375 16.429688 57.902344 15.34375 57.902344 Z M 15.34375 57.902344 "/></g><g clip-path="url(#rb-clip-15)"><path fill-rule="nonzero" fill="var(--surface)" fill-opacity="1" d="M 15.34375 25.363281 C 16.234375 25.363281 17.21875 25.5625 18.007812 26.054688 L 27.175781 31.378906 C 28.855469 32.367188 29.839844 34.042969 29.839844 36.015625 L 29.839844 46.664062 C 29.839844 48.535156 28.855469 50.3125 27.175781 51.296875 L 18.007812 56.621094 C 17.21875 57.117188 16.234375 57.3125 15.34375 57.3125 C 14.457031 57.3125 13.472656 57.117188 12.683594 56.621094 L 3.511719 51.296875 C 1.835938 50.3125 0.851562 48.636719 0.851562 46.664062 L 0.851562 36.015625 C 0.851562 34.140625 1.835938 32.367188 3.511719 31.378906 L 12.683594 26.054688 C 13.472656 25.660156 14.457031 25.363281 15.34375 25.363281 Z M 15.34375 23.984375 C 14.160156 23.984375 12.980469 24.28125 11.992188 24.871094 L 2.824219 30.195312 C 0.75 31.378906 -0.53125 33.648438 -0.53125 36.015625 L -0.53125 46.664062 C -0.53125 49.03125 0.75 51.296875 2.824219 52.480469 L 11.992188 57.804688 C 12.980469 58.398438 14.160156 58.691406 15.34375 58.691406 C 16.527344 58.691406 17.710938 58.398438 18.699219 57.804688 L 27.867188 52.480469 C 29.9375 51.296875 31.21875 49.03125 31.21875 46.664062 L 31.21875 36.015625 C 31.21875 33.648438 29.9375 31.378906 27.867188 30.195312 L 18.699219 24.871094 C 17.710938 24.28125 16.527344 23.984375 15.34375 23.984375 Z M 15.34375 23.984375 "/></g><g clip-path="url(#rb-clip-16)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 11.300781 55.636719 C 10.414062 55.636719 9.527344 55.4375 8.835938 54.945312 L 2.722656 51.398438 C 1.144531 50.507812 0.257812 48.832031 0.257812 47.058594 L 0.257812 39.957031 C 0.257812 38.183594 1.246094 36.507812 2.722656 35.621094 L 8.835938 32.070312 C 9.625 31.675781 10.414062 31.378906 11.300781 31.378906 C 12.191406 31.378906 13.078125 31.578125 13.769531 32.070312 L 19.882812 35.621094 C 21.457031 36.507812 22.347656 38.183594 22.347656 39.957031 L 22.347656 47.058594 C 22.347656 48.832031 21.359375 50.507812 19.882812 51.398438 L 13.769531 54.945312 C 13.078125 55.339844 12.191406 55.636719 11.300781 55.636719 Z M 11.300781 55.636719 "/></g><g clip-path="url(#rb-clip-17)"><path fill-rule="nonzero" fill="var(--surface)" fill-opacity="1" d="M 11.300781 32.167969 C 11.992188 32.167969 12.78125 32.367188 13.472656 32.761719 L 19.585938 36.308594 C 20.867188 37.097656 21.753906 38.480469 21.753906 40.058594 L 21.753906 47.15625 C 21.753906 48.734375 20.964844 50.113281 19.585938 50.902344 L 13.472656 54.453125 C 12.78125 54.847656 12.089844 55.046875 11.300781 55.046875 C 10.515625 55.046875 9.824219 54.847656 9.132812 54.453125 L 3.019531 50.902344 C 1.738281 50.113281 0.851562 48.734375 0.851562 47.15625 L 0.851562 40.058594 C 0.851562 38.480469 1.640625 37.097656 3.019531 36.308594 L 9.132812 32.761719 C 9.824219 32.367188 10.613281 32.167969 11.300781 32.167969 Z M 11.300781 30.789062 C 10.316406 30.789062 9.332031 31.085938 8.441406 31.578125 L 2.328125 35.128906 C 0.554688 36.113281 -0.53125 37.988281 -0.53125 40.058594 L -0.53125 47.15625 C -0.53125 49.226562 0.554688 51.101562 2.328125 52.085938 L 8.441406 55.636719 C 9.332031 56.128906 10.316406 56.425781 11.300781 56.425781 C 12.289062 56.425781 13.273438 56.128906 14.160156 55.636719 L 20.273438 52.085938 C 22.050781 51.101562 23.136719 49.226562 23.136719 47.15625 L 23.136719 40.058594 C 23.136719 37.988281 22.050781 36.113281 20.273438 35.128906 L 14.160156 31.578125 C 13.273438 31.085938 12.289062 30.789062 11.300781 30.789062 Z M 11.300781 30.789062 "/></g><g clip-path="url(#rb-clip-18)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 7.257812 53.269531 C 6.570312 53.269531 5.878906 53.074219 5.289062 52.777344 L 2.230469 51.003906 C 1.046875 50.3125 0.257812 49.03125 0.257812 47.550781 L 0.257812 44 C 0.257812 42.621094 1.046875 41.242188 2.230469 40.550781 L 5.289062 38.773438 C 5.878906 38.382812 6.570312 38.28125 7.257812 38.28125 C 7.949219 38.28125 8.640625 38.480469 9.230469 38.773438 L 12.289062 40.550781 C 13.472656 41.242188 14.261719 42.523438 14.261719 44 L 14.261719 47.550781 C 14.261719 48.929688 13.472656 50.3125 12.289062 51.003906 L 9.230469 52.777344 C 8.640625 53.074219 7.949219 53.269531 7.257812 53.269531 Z M 7.257812 53.269531 "/></g><g clip-path="url(#rb-clip-19)"><path fill-rule="nonzero" fill="var(--surface)" fill-opacity="1" d="M 7.257812 38.972656 C 7.851562 38.972656 8.34375 39.070312 8.835938 39.367188 L 11.894531 41.144531 C 12.878906 41.734375 13.472656 42.820312 13.472656 44.003906 L 13.472656 47.550781 C 13.472656 48.734375 12.878906 49.820312 11.894531 50.410156 L 8.835938 52.1875 C 8.34375 52.480469 7.753906 52.582031 7.257812 52.582031 C 6.765625 52.582031 6.175781 52.480469 5.683594 52.1875 L 2.625 50.410156 C 1.640625 49.820312 1.046875 48.734375 1.046875 47.550781 L 1.046875 44.003906 C 1.046875 42.820312 1.640625 41.734375 2.625 41.144531 L 5.683594 39.367188 C 6.175781 39.171875 6.765625 38.972656 7.257812 38.972656 Z M 7.257812 37.59375 C 6.472656 37.59375 5.683594 37.789062 4.894531 38.183594 L 1.835938 39.960938 C 0.355469 40.75 -0.53125 42.324219 -0.53125 44.003906 L -0.53125 47.550781 C -0.53125 49.226562 0.355469 50.707031 1.835938 51.59375 L 4.894531 53.371094 C 5.582031 53.765625 6.371094 53.960938 7.257812 53.960938 C 8.046875 53.960938 8.835938 53.765625 9.625 53.371094 L 12.683594 51.59375 C 14.160156 50.804688 15.050781 49.226562 15.050781 47.550781 L 15.050781 44.003906 C 15.050781 42.324219 14.160156 40.847656 12.683594 39.960938 L 9.625 38.183594 C 8.9375 37.789062 8.148438 37.59375 7.257812 37.59375 Z M 7.257812 37.59375 "/></g><g clip-path="url(#rb-clip-20)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 3.316406 51.003906 C 2.824219 51.003906 2.328125 50.902344 1.835938 50.609375 C 0.949219 50.113281 0.355469 49.128906 0.355469 48.042969 C 0.355469 46.960938 0.949219 46.074219 1.835938 45.480469 C 2.328125 45.183594 2.824219 45.085938 3.316406 45.085938 C 3.808594 45.085938 4.300781 45.183594 4.792969 45.480469 C 5.683594 45.972656 6.273438 46.960938 6.273438 48.042969 C 6.273438 49.128906 5.683594 50.015625 4.792969 50.609375 C 4.300781 50.804688 3.808594 51.003906 3.316406 51.003906 Z M 3.316406 51.003906 "/></g><g clip-path="url(#rb-clip-21)"><path fill-rule="nonzero" fill="var(--surface)" fill-opacity="1" d="M 3.316406 45.777344 C 3.710938 45.777344 4.105469 45.875 4.398438 46.074219 C 5.089844 46.46875 5.484375 47.15625 5.484375 48.046875 C 5.484375 48.835938 5.089844 49.621094 4.398438 50.015625 C 4.105469 50.214844 3.710938 50.3125 3.316406 50.3125 C 2.921875 50.3125 2.527344 50.214844 2.230469 50.015625 C 1.539062 49.621094 1.144531 48.933594 1.144531 48.046875 C 1.144531 47.257812 1.539062 46.46875 2.230469 46.074219 C 2.527344 45.875 2.921875 45.777344 3.316406 45.777344 Z M 3.316406 44.398438 C 2.722656 44.398438 2.035156 44.59375 1.539062 44.890625 C 0.457031 45.582031 -0.234375 46.761719 -0.234375 48.046875 C -0.234375 49.328125 0.457031 50.511719 1.539062 51.199219 C 2.132812 51.496094 2.722656 51.695312 3.316406 51.695312 C 3.90625 51.695312 4.597656 51.496094 5.089844 51.199219 C 6.175781 50.511719 6.867188 49.328125 6.867188 48.046875 C 6.867188 46.761719 6.175781 45.582031 5.089844 44.890625 C 4.5 44.59375 3.90625 44.398438 3.316406 44.398438 Z M 3.316406 44.398438 "/></g></g><clipPath id="rb-clip-23"><rect x="0" y="0" width="362" height="67"/></clipPath><g id="rb-source-12" clip-path="url(#rb-clip-23)"><g clip-path="url(#rb-clip-5)"><g mask="url(#rb-mask-1)"><use xlink:href="#rb-source-8"/></g></g></g></defs><g clip-path="url(#rb-clip-0)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 350.921875 31.871094 C 350.628906 32.265625 350.429688 32.761719 350.429688 33.253906 C 350.429688 33.84375 350.628906 34.4375 351.023438 34.832031 L 363.445312 49.324219 L 353.488281 49.324219 L 344.710938 39.167969 L 335.933594 49.324219 L 325.976562 49.324219 L 338.203125 35.125 C 338.695312 34.734375 339.089844 34.042969 339.089844 33.351562 C 339.089844 32.660156 338.792969 32.070312 338.300781 31.675781 L 326.371094 17.773438 L 336.328125 17.773438 L 344.808594 27.632812 L 353.289062 17.773438 L 363.25 17.773438 Z M 289.097656 49.324219 L 289.097656 17.675781 L 323.90625 17.675781 L 323.90625 25.265625 L 299.15625 25.265625 C 299.058594 25.265625 298.859375 25.265625 298.761719 25.265625 C 297.480469 25.265625 296.492188 26.253906 296.492188 27.535156 C 296.492188 28.71875 297.480469 29.800781 298.664062 29.800781 L 321.242188 29.800781 L 321.242188 37.394531 L 299.15625 37.394531 C 299.058594 37.394531 298.859375 37.394531 298.761719 37.394531 C 297.480469 37.394531 296.492188 38.382812 296.492188 39.664062 C 296.492188 40.847656 297.480469 41.929688 298.664062 41.929688 L 323.90625 41.929688 L 323.90625 49.523438 L 289.097656 49.523438 Z M 273.914062 25.265625 C 273.125 25.265625 272.433594 25.957031 272.433594 26.84375 L 272.433594 49.425781 L 264.152344 49.425781 L 264.152344 26.84375 C 264.152344 26.054688 263.460938 25.363281 262.671875 25.265625 L 250.839844 25.265625 L 250.839844 17.675781 L 286.535156 17.675781 L 286.535156 25.265625 Z M 239.992188 27.042969 C 240.09375 26.546875 239.992188 26.054688 239.597656 25.660156 C 239.007812 25.070312 238.019531 25.070312 237.429688 25.660156 C 237.332031 25.757812 237.132812 25.957031 237.132812 26.152344 L 222.246094 49.425781 L 206.566406 49.425781 L 206.566406 17.773438 L 214.847656 17.773438 L 214.847656 40.253906 C 214.75 40.746094 214.949219 41.140625 215.242188 41.535156 C 215.835938 42.128906 216.820312 42.128906 217.414062 41.535156 C 217.511719 41.4375 217.707031 41.242188 217.707031 41.042969 L 232.695312 17.773438 L 248.375 17.773438 L 248.375 49.425781 L 240.09375 49.425781 L 240.09375 27.042969 Z M 175.902344 29.703125 L 194.636719 29.703125 C 200.058594 29.703125 204.398438 34.140625 204.398438 39.464844 C 204.398438 44.789062 200.058594 49.226562 194.636719 49.226562 L 165.449219 49.226562 L 165.449219 17.574219 L 199.863281 17.574219 L 199.863281 25.167969 L 176.394531 25.167969 C 176.296875 25.167969 176.097656 25.167969 176 25.167969 C 174.71875 25.167969 173.730469 26.152344 173.730469 27.4375 C 173.730469 28.617188 174.71875 29.703125 175.902344 29.703125 Z M 173.730469 41.734375 L 194.535156 41.734375 C 195.820312 41.734375 196.804688 40.746094 196.804688 39.464844 C 196.804688 38.183594 195.820312 37.199219 194.535156 37.199219 L 173.730469 37.199219 Z M 144.347656 49.324219 L 124.332031 49.324219 L 124.332031 41.734375 L 135.570312 41.734375 C 135.769531 41.734375 135.867188 41.832031 136.066406 41.832031 C 136.953125 41.832031 137.640625 41.140625 137.640625 40.253906 C 137.640625 39.859375 137.542969 39.5625 137.246094 39.269531 L 123.34375 17.574219 L 133.203125 17.574219 L 142.671875 32.265625 C 142.769531 32.464844 142.867188 32.5625 142.96875 32.660156 C 142.96875 32.660156 142.96875 32.660156 142.96875 32.761719 C 143.558594 33.351562 144.542969 33.351562 145.136719 32.761719 C 145.332031 32.5625 145.53125 32.265625 145.53125 31.972656 L 145.628906 32.070312 L 154.898438 17.574219 L 164.757812 17.574219 Z M 115.160156 37.296875 L 95.734375 37.296875 C 94.945312 37.296875 94.257812 37.988281 94.257812 38.875 L 94.257812 49.425781 L 85.972656 49.425781 L 85.972656 17.773438 L 115.257812 17.773438 C 120.582031 17.871094 124.824219 22.210938 124.824219 27.535156 C 124.824219 32.859375 120.386719 37.097656 115.160156 37.296875 Z M 114.863281 25.265625 L 94.15625 25.265625 L 94.15625 29.703125 L 115.0625 29.703125 C 116.246094 29.605469 117.132812 28.617188 117.132812 27.4375 C 117.132812 26.253906 116.148438 25.265625 114.863281 25.265625 Z M 114.863281 25.265625 "/></g><g clip-path="url(#rb-clip-1)"><path fill-rule="nonzero" fill="currentColor" fill-opacity="1" d="M 62.011719 45.382812 L 62.011719 20.730469 C 62.011719 17.773438 60.433594 15.011719 57.773438 13.433594 L 36.472656 1.109375 C 33.910156 -0.371094 30.65625 -0.371094 28.09375 1.109375 L 6.792969 13.433594 C 4.230469 14.914062 2.554688 17.675781 2.554688 20.730469 L 2.554688 45.382812 C 2.554688 48.339844 4.132812 51.101562 6.792969 52.679688 L 28.09375 65.003906 C 30.65625 66.484375 33.910156 66.484375 36.472656 65.003906 L 57.773438 52.679688 C 60.433594 51.199219 62.011719 48.4375 62.011719 45.382812 Z M 62.011719 45.382812 "/></g><g clip-path="url(#rb-clip-2)"><g mask="url(#rb-mask-0)"><use xlink:href="#rb-source-12" transform="matrix(1, 0, 0, 1, 2, 0)"/></g></g></svg></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- ============ LEFT ============ -->
+    <div>
+      <div class="stage" id="stage">
+        <div id="preview"></div>
+        <div class="ruler" id="ruler">
+          <div class="ruler-bar" id="rulerbar"><u></u></div>
+          <div class="ruler-lab" id="rulerlab">10 мм</div>
+        </div>
+        <div class="stage-foot">
+          <span id="foot-size">—</span>
+          <span id="foot-mode">≈ 1:1 на экране</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h"><h2>Тождественность на любом масштабе</h2>
+          <span class="hint">одна высота показа · оптический закон без лимитов печати</span></div>
+        <div class="strip" id="strip"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Закон построения</h2><span class="hint">выведен из мастер-знака 135 мм</span></div>
+        <div class="law">
+          <div><h3>Поле борозд постоянно</h3><p>Вершины борозд всегда лежат на диагонали «верх → нижний-левый угол»
+            и занимают одну и ту же её долю. Первая — в полушаге от скруглённой макушки.</p></div>
+          <div><h3>Скважность постоянна</h3><p>Контур = <code>0,185 × шаг</code>. Соотношение чёрного и белого
+            не зависит от числа борозд, поэтому оптическая плотность пятна одинакова.</p></div>
+          <div><h3>Радиусы пропорциональны</h3><p>Скругление силуэта <code>0,080 × W</code>; у борозд линейно
+            от <code>0,084 × W</code> снаружи до <code>0,029 × W</code> внутри.</p></div>
+          <div><h3>Меняется только число</h3><p><code>N ≈ 1,35 √W</code>, но не больше, чем позволяет минимальная
+            линия технологии, и не меньше семи — иначе знак теряет характер.</p></div>
+        </div>
+      </div>
+
+      <details class="adv card">
+        <summary>Константы системы</summary>
+        <div class="advgrid" id="advgrid"></div>
+      </details>
+    </div>
+
+    <!-- ============ RIGHT ============ -->
+    <div>
+      <div class="card">
+        <div class="card-h"><h2>Размер знака</h2><span class="hint">ширина по горизонтали</span></div>
+        <div class="card-b">
+          <div class="minipv" id="minipv">
+            <div class="minipv-art" id="mini-art"></div>
+            <div class="minipv-read">
+              <div class="minipv-n"><b id="mini-n">—</b><span>борозд</span></div>
+              <div class="minipv-meta" id="mini-meta"></div>
+            </div>
+          </div>
+          <div class="field">
+            <div class="sizerow">
+              <input type="number" id="w" min="3" max="600" step="0.5" value="60" aria-label="Ширина знака, мм">
+              <span class="unit">мм в ширину</span>
+            </div>
+            <input type="range" id="wr" min="3" max="300" step="0.5" value="60" aria-label="Ширина, ползунок">
+            <div class="band" id="band"></div>
+            <div class="bandlab"><span id="band-lo"></span><span id="band-hi"></span></div>
+            <div class="presets" id="presets"></div>
+          </div>
+
+          <div class="field">
+            <label class="lab" for="tech">Технология воспроизведения</label>
+            <select id="tech"></select>
+            <div class="sizerow" style="gap:10px;margin-top:9px">
+              <input type="number" id="minline" min="0.02" max="4" step="0.01" style="width:96px;font-size:14px">
+              <span class="unit">мм — минимальный элемент</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lab">Количество борозд</label>
+            <div class="seg" role="group">
+              <button id="mAuto" aria-pressed="true">Авто</button>
+              <button id="mMan" aria-pressed="false">Вручную</button>
+            </div>
+            <div class="stepper">
+              <button id="dec" aria-label="Меньше борозд">−</button>
+              <span class="val" id="nval">16</span>
+              <button id="inc" aria-label="Больше борозд">+</button>
+              <span class="cap" id="ncap"></span>
+            </div>
+            <div class="deriv" id="deriv"></div>
+          </div>
+
+          <div class="field">
+            <label class="lab">Цвет знака</label>
+            <div class="swatches" role="group">
+              <button class="sw" id="cBlack" aria-pressed="true"><i style="background:#000000"></i>Чёрный<em>#000000</em></button>
+              <button class="sw" id="cOrange" aria-pressed="false"><i style="background:#EB5036"></i>Оранжевый<em>#EB5036</em></button>
+            </div>
+            <div class="seg" role="group" style="margin-top:9px">
+              <button id="pPos" aria-pressed="true">На светлом</button>
+              <button id="pNeg" aria-pressed="false">Выворотка</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Спецификация</h2><span class="hint" id="spec-hint">мм</span></div>
+        <div class="card-b">
+          <table class="spec">
+            <tbody id="spectbl"></tbody>
+          </table>
+          <div id="verdict"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Экспорт</h2><span class="hint">один compound path</span></div>
+        <div class="card-b">
+          <div class="btnrow">
+            <button class="btn" id="dl">Скачать SVG</button>
+            <button class="btn ghost" id="cp">Копировать код</button>
+          </div>
+          <div class="filename" id="fname"></div>
+          <details class="code"><summary>Показать SVG</summary>
+            <pre class="svgsrc" id="src"></pre></details>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <span>Геометрия восстановлена по мастер-знаку · совпадение 95 % (остальное — антиалиасинг растра)</span>
+    <span id="ver"></span>
+  </footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+const SQ3=Math.sqrt(3);
+const K={R:0.080,r1:0.084,rN:0.029,rL:0.042,duty:0.185,endGap:0.75,phase:0.458,kN:1.35,nMin:7,nMax:26};
+
+const v=(x,y)=>({x,y}), add=(a,b)=>v(a.x+b.x,a.y+b.y), sub=(a,b)=>v(a.x-b.x,a.y-b.y),
+      mul=(a,s)=>v(a.x*s,a.y*s), crs=(a,b)=>a.x*b.y-a.y*b.x, dt=(a,b)=>a.x*b.x+a.y*b.y,
+      nrm=a=>{const l=Math.hypot(a.x,a.y);return v(a.x/l,a.y/l)};
+const F=n=>String(Math.round(n*1000)/1000), PT=p=>F(p.x)+' '+F(p.y);
+const ARC=(from,to,c,r)=>'A'+F(r)+' '+F(r)+' 0 0 '+(crs(sub(from,c),sub(to,c))>0?1:0)+' '+PT(to);
+const TAU=Math.PI*2;
+function wrap(a){while(a<=-Math.PI)a+=TAU;while(a>Math.PI)a-=TAU;return a;}
+function angOf(c,p){return Math.atan2(p.y-c.y,p.x-c.x);}
+// fraction along a sweep a0→a0+span at angle `a`, or null when outside
+function frac(a0,span,a){
+  let d=wrap(a-a0);
+  if(span>=0){ if(d<-1e-9)d+=TAU; return (d>=-1e-9&&d<=span+1e-9)?d/span:null; }
+  if(d>1e-9)d-=TAU; return (d<=1e-9&&d>=span-1e-9)?d/span:null;
+}
+function raySeg(o,d,a,b){
+  const s=sub(b,a),den=crs(d,s); if(Math.abs(den)<1e-12)return null;
+  const t=crs(sub(a,o),s)/den,u=crs(sub(a,o),d)/den;
+  return (t>1e-9&&u>=-1e-9&&u<=1+1e-9)?{t,u}:null;
+}
+function rayArc(o,d,c,r,pa,pb){
+  const f=sub(o,c),A=dt(d,d),B=2*dt(f,d),C=dt(f,f)-r*r,disc=B*B-4*A*C;
+  if(disc<0)return null; const sq=Math.sqrt(disc);
+  const a0=angOf(c,pa),span=wrap(angOf(c,pb)-a0);
+  let best=null;
+  for(const t of [(-B-sq)/(2*A),(-B+sq)/(2*A)]){
+    if(t<=1e-9)continue;
+    const u=frac(a0,span,angOf(c,add(o,mul(d,t))));
+    if(u!==null&&(!best||t<best.t))best={t,u};
+  }
+  return best;
+}
+// circle (cc,rr) sweeping a0→a0+span  ×  segment [a,b]
+function circSeg(cc,rr,a0,span,a,b){
+  const d=sub(b,a),f=sub(a,cc);
+  const A=dt(d,d),B=2*dt(f,d),C=dt(f,f)-rr*rr,disc=B*B-4*A*C;
+  if(disc<0)return []; const sq=Math.sqrt(disc); const out=[];
+  for(const t of [(-B-sq)/(2*A),(-B+sq)/(2*A)]){
+    if(t<-1e-9||t>1+1e-9)continue;
+    const p=add(a,mul(d,t)), u=frac(a0,span,angOf(cc,p));
+    if(u!==null)out.push({p,u,bu:Math.max(0,Math.min(1,t))});
+  }
+  return out;
+}
+// circle (cc,rr) sweeping a0→a0+span  ×  boundary arc (c2,r2,pa→pb)
+function circArc(cc,rr,a0,span,c2,r2,pa,pb){
+  const dx=c2.x-cc.x,dy=c2.y-cc.y,D=Math.hypot(dx,dy);
+  if(D<1e-9||D>rr+r2||D<Math.abs(rr-r2))return [];
+  const aa=(rr*rr-r2*r2+D*D)/(2*D), hh2=rr*rr-aa*aa; if(hh2<0)return [];
+  const hh=Math.sqrt(hh2), mx=cc.x+aa*dx/D, my=cc.y+aa*dy/D;
+  const b0=angOf(c2,pa), bspan=wrap(angOf(c2,pb)-b0), out=[];
+  for(const s of [1,-1]){
+    const p=v(mx+s*hh*(-dy)/D, my+s*hh*(dx)/D);
+    const u=frac(a0,span,angOf(cc,p)), bu=frac(b0,bspan,angOf(c2,p));
+    if(u!==null&&bu!==null)out.push({p,u,bu});
+  }
+  return out;
+}
+
+function buildMark(W,N,opts){
+  const c=Object.assign({},K,opts||{});
+  const Hs=W*2/SQ3, R=c.R*W, ta=R/SQ3, tip=R*(2/SQ3-1);
+  const T=v(W/2,0),UR=v(W,Hs/4),LR=v(W,3*Hs/4),B=v(W/2,Hs),LL=v(0,3*Hs/4),L=v(0,Hs/4);
+  const verts=[T,UR,LR,B,LL,L], prim=[];
+  for(let i=0;i<6;i++){
+    const V=verts[i],Pv=verts[(i+5)%6],Nv=verts[(i+1)%6];
+    const dp=nrm(sub(Pv,V)),dn=nrm(sub(Nv,V));
+    prim.push({type:'arc',a:add(V,mul(dp,ta)),b:add(V,mul(dn,ta)),c:add(V,mul(nrm(add(dp,dn)),R*2/SQ3)),r:R});
+    prim.push({type:'seg',a:add(V,mul(dn,ta)),b:add(Nv,mul(nrm(sub(V,Nv)),ta))});
+  }
+  const hitRay=(o,d)=>{let best=null;prim.forEach((pr,idx)=>{
+    const h=pr.type==='seg'?raySeg(o,d,pr.a,pr.b):rayArc(o,d,pr.c,pr.r,pr.a,pr.b);
+    if(h&&(!best||h.t<best.t))best={idx,u:h.u,p:add(o,mul(d,h.t))};});return best;};
+  // first exit of an offset arc through the silhouette, walking a0 → a0+span
+  const hitArc=(cc,rr,a0,span)=>{
+    let best=null;
+    prim.forEach((pr,idx)=>{
+      const hits=pr.type==='seg'?circSeg(cc,rr,a0,span,pr.a,pr.b)
+                                :circArc(cc,rr,a0,span,pr.c,pr.r,pr.a,pr.b);
+      hits.forEach(h=>{ if(!best||h.u<best.u)best={idx,u:h.bu,p:h.p,cu:h.u}; });
+    });
+    return best;
+  };
+
+  const u=v(-0.5,SQ3/2), dL=v(-SQ3/2,0.5), dR=v(SQ3/2,0.5),
+        nO=v(-0.5,-SQ3/2), nOr=v(0.5,-SQ3/2);
+  const pitch=(W-2*tip)/(N+c.endGap), w=c.duty*pitch, h=w/2;
+  const xv=-1.25*h;                       // left tail sits just outside the edge
+  const sCut=sub(LL,UR);
+
+  const grooves=[];
+  for(let k=1;k<=N;k++){
+    const A=add(T,mul(u,tip+(k-c.phase)*pitch));
+    let rT=(c.r1-(c.r1-c.rN)*(N>1?(k-1)/(N-1):0))*W;
+    // corner vertices: right on the cut line, left on the tail line
+    const tR=crs(sub(UR,A),sCut)/crs(dR,sCut), tL=(A.x-xv)/(SQ3/2);
+    let rR=rT, rLk=c.rL*W;
+    // keep every tangent length inside its arm
+    const fit=()=>{
+      const armR=tR-0.5774*rR-0.5774*rT, armL=tL-0.5774*rLk-0.5774*rT;
+      return Math.min(armR,armL);
+    };
+    let guard=0;
+    while(fit()<0.02*pitch&&guard++<24){ rT*=0.88; rR=rT; rLk*=0.94; }
+    rT=Math.max(rT,h*1.3); rR=Math.max(rR,h*1.3); rLk=Math.max(rLk,h*1.3);
+    const VR=add(A,mul(dR,tR)), VL=add(A,mul(dL,tL));
+    const OT=add(A,v(0,rT*2/SQ3));
+    const OR=add(VR,v(-rR,rR/SQ3));
+    const OL=add(VL,v(rLk,rLk/SQ3));
+    grooves.push({k,A,rT,rR,rL:rLk,OT,OR,OL,
+      PLt:add(A,mul(dL,0.5774*rT)), PRt:add(A,mul(dR,0.5774*rT)),
+      PRa:sub(VR,mul(dR,0.5774*rR)), PLa:sub(VL,mul(dL,0.5774*rLk))});
+  }
+
+  let dstr='',cur=null;
+  const lineTo=p=>{dstr+='L'+PT(p);cur=p;}, arcTo=(p,ctr,r)=>{dstr+=ARC(cur,p,ctr,r);cur=p;};
+  function bpt(idx,uu){const pr=prim[idx];
+    if(pr.type==='seg')return add(pr.a,mul(sub(pr.b,pr.a),uu));
+    const a0=angOf(pr.c,pr.a),span=wrap(angOf(pr.c,pr.b)-a0),an=a0+span*uu;
+    return v(pr.c.x+pr.r*Math.cos(an),pr.c.y+pr.r*Math.sin(an));}
+  function walk(from,to){let i=Math.floor(from+1e-9);
+    while(i<=Math.min(Math.floor(to-1e-9),prim.length-1)){
+      const u0=Math.max(0,from-i),u1=Math.min(1,to-i);
+      if(u1>u0+1e-12){const p=bpt(i,u1);
+        if(prim[i].type==='seg')lineTo(p);else arcTo(p,prim[i].c,prim[i].r);} i++;}}
+
+  // offset helpers -----------------------------------------------------------
+  const off=(p,n,s)=>add(p,mul(n,s));
+  function ends(g){
+    // LEFT corner: inner (r-h) and outer (r+h) arcs, swept arm-tangent → tail-tangent
+    const aArm=angOf(g.OL,g.PLa), aTail=aArm+0;      // recomputed below
+    const PLtail=add(g.OL,v(-g.rL,0));               // tail tangent point (vertical)
+    const spanL=wrap(angOf(g.OL,PLtail)-angOf(g.OL,g.PLa));
+    const a0i=angOf(g.OL,off(g.PLa,nO,-h)), a0o=angOf(g.OL,off(g.PLa,nO,h));
+    const inHit=hitArc(g.OL,g.rL-h,a0i,spanL), outHit=hitArc(g.OL,g.rL+h,a0o,spanL);
+    // RIGHT corner: cut by the UR–LL diagonal
+    const spanR=wrap(angOf(g.OR,add(g.OR,v(0,g.rR)))-angOf(g.OR,g.PRa));
+    const b0i=angOf(g.OR,off(g.PRa,nOr,-h)), b0o=angOf(g.OR,off(g.PRa,nOr,h));
+    const ci=circSeg(g.OR,g.rR-h,b0i,spanR,UR,LL).sort((p,q)=>p.u-q.u)[0];
+    const co=circSeg(g.OR,g.rR+h,b0o,spanR,UR,LL).sort((p,q)=>p.u-q.u)[0];
+    return {inHit,outHit,ci,co,spanL,spanR,a0i,a0o,b0i,b0o};
+  }
+  grooves.forEach(g=>{ g.e=ends(g);
+    if(!g.e.inHit) g.e.inHit=hitRay(off(g.A,nO,-h),dL);
+    if(!g.e.outHit)g.e.outHit=hitRay(off(g.A,nO,h),dL);
+  });
+
+  function detour(g){
+    const E=g.e;
+    // inner flank: boundary → L arc → arm → apex arc → arm → UR arc → cut
+    arcTo(off(g.PLa,nO,-h),g.OL,g.rL-h);
+    lineTo(off(g.PLt,nO,-h));
+    arcTo(off(g.PRt,nOr,-h),g.OT,g.rT-h);
+    lineTo(off(g.PRa,nOr,-h));
+    if(E.ci){arcTo(E.ci.p,g.OR,g.rR-h); lineTo(E.co?E.co.p:E.ci.p);}
+    // outer flank back
+    if(E.co)arcTo(off(g.PRa,nOr,h),g.OR,g.rR+h);
+    lineTo(off(g.PRt,nOr,h));
+    arcTo(off(g.PLt,nO,h),g.OT,g.rT+h);
+    lineTo(off(g.PLa,nO,h));
+    arcTo(E.outHit.p,g.OL,g.rL+h);
+  }
+
+  const cuts=grooves.map(g=>({g,from:g.e.inHit.idx+g.e.inHit.u,to:g.e.outHit.idx+g.e.outHit.u}))
+                    .filter(x=>x.to>=x.from).sort((a,b)=>a.from-b.from);
+  let ptr=0; cur=bpt(0,0); dstr='M'+PT(cur);
+  for(const ct of cuts){
+    if(ct.from<ptr-1e-9)continue;
+    walk(ptr,ct.from);
+    const p0=ct.g.e.inHit.p;
+    if(Math.hypot(p0.x-cur.x,p0.y-cur.y)>1e-9)lineTo(p0);
+    detour(ct.g);
+    lineTo(ct.g.e.outHit.p);
+    ptr=ct.to;
+  }
+  walk(ptr,prim.length); dstr+='Z';
+
+  return {d:dstr,W,H:Hs-2*tip,viewY:tip,pitch,w,N,
+    web:0.5*pitch-w, band:pitch-w,
+    r1:grooves.length?grooves[0].rT:0, rN:grooves.length?grooves[N-1].rT:0};
+}
+function svgOf(m,color,attrs){
+  return '<svg xmlns="http://www.w3.org/2000/svg" '+(attrs||'')+' viewBox="0 '+F(m.viewY)+' '+
+    F(m.W)+' '+F(m.H)+'"><path fill="'+color+'" fill-rule="evenodd" d="'+m.d+'"/></svg>';
+}
+
+/* ---------------- rules ---------------- */
+const TECH=[
+  {n:'Офсет / цифровая печать',v:0.15},
+  {n:'Шелкография по бумаге',v:0.25},
+  {n:'Шелкография по текстилю',v:0.45},
+  {n:'Тампопечать',v:0.20},
+  {n:'Флексопечать по картону',v:0.30},
+  {n:'Тиснение фольгой',v:0.30},
+  {n:'Лазерная гравировка',v:0.08},
+  {n:'Фрезеровка / ЧПУ',v:0.60},
+  {n:'Плоттерная резка плёнки',v:0.80},
+  {n:'Вышивка',v:1.20},
+  {n:'Экран, 1 px @ 96 ppi',v:0.265},
+  {n:'Без ограничения',v:0.01}
+];
+const tipF = k => k.R*(2/SQ3-1);              // tip inset / W
+function maxN(W,min,k){                        // largest N whose thinnest element survives
+  const eff=W*(1-2*tipF(k));
+  const byLine=k.duty*eff/min-k.endGap;        // white groove
+  const byWeb=(0.5-k.duty)*eff/min-k.endGap;   // black web on the dense flank
+  return Math.floor(Math.min(byLine,byWeb)+1e-9);
+}
+function minWidth(N,min,k){                    // smallest W that keeps N grooves printable
+  const need=Math.max((N+k.endGap)*min/k.duty,(N+k.endGap)*min/(0.5-k.duty));
+  return need/(1-2*tipF(k));
+}
+const optN = (W,k) => Math.min(k.nMax,Math.max(k.nMin,Math.round(k.kN*Math.sqrt(W))));
+
+/* ---------------- state ---------------- */
+const S={W:60,tech:1,min:0.25,auto:true,N:11,neg:false,color:'#000000',k:Object.assign({},K)};
+const BAND={lo:6,hi:21};
+const $=id=>document.getElementById(id);
+const nf=(x,d)=>x.toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+/* presets */
+const PRE=[['Бейдж',18],['Визитка',12],['Упаковка',60],['Плакат',180],['Вывеска',400]];
+$('presets').innerHTML=PRE.map(p=>'<button class="chip" data-w="'+p[1]+'">'+p[0]+' · '+p[1]+' мм</button>').join('');
+$('tech').innerHTML=TECH.map((t,i)=>'<option value="'+i+'">'+t.n+' · '+nf(t.v,2)+' мм</option>').join('');
+$('tech').value=1; $('minline').value=S.min;
+
+/* advanced constants */
+const ADV=[['R','Скругление силуэта / W',0.02,0.16,0.002],['r1','Радиус борозды снаружи / W',0.02,0.16,0.002],
+  ['rN','Радиус борозды внутри / W',0,0.12,0.002],['rL','Радиус левого угла / W',0.01,0.12,0.002],['duty','Контур / шаг',0.08,0.34,0.005],
+  ['phase','Фаза первой борозды',0.1,0.9,0.01],['endGap','Отступ последней, шагов',0.2,2,0.05],
+  ['kN','Коэффициент N = k√W',0.8,2.2,0.05]];
+$('advgrid').innerHTML=ADV.map(a=>'<div class="field"><label class="lab" for="k_'+a[0]+'">'+a[1]+
+  '</label><input type="number" id="k_'+a[0]+'" min="'+a[2]+'" max="'+a[3]+'" step="'+a[4]+
+  '" value="'+S.k[a[0]]+'"></div>').join('')+
+  '<div class="field" style="align-self:end"><button class="chip" id="kreset">Вернуть мастер-значения</button></div>';
+
+/* ---------------- render ---------------- */
+function compute(){
+  const k=S.k, W=S.W, nOpt=optN(W,k), nMax=maxN(W,S.min,k);
+  const nAuto=Math.max(3,Math.min(nOpt,nMax));
+  const N=S.auto?nAuto:S.N;
+  const m=buildMark(W,Math.max(1,N),k);
+  return {W,N,m,nOpt,nMax,nAuto,k};
+}
+function draw(){
+  const c=compute(), m=c.m;
+  const ink=S.neg?(S.color==='#000000'?'#FFFFFF':S.color):S.color;
+  S.N=c.N; if(!S.auto)$('nval').textContent=c.N; else $('nval').textContent=c.N;
+
+  /* preview at ≈1:1, capped so the artboard stays usable */
+  const maxMM=Math.min(190,Math.max(40,window.innerWidth>900?170:120));
+  const shown=Math.min(m.W,maxMM), scale=shown/m.W;
+  $('preview').innerHTML=svgOf(m,ink,'width="'+F(shown)+'mm" height="'+F(m.H*scale)+'mm"');
+  $('stage').classList.toggle('inv',S.neg);
+  $('foot-size').textContent=nf(m.W,1)+' × '+nf(m.H,1)+' мм · '+c.N+' борозд';
+  $('foot-mode').textContent=scale<0.999?'показан в масштабе 1:'+nf(1/scale,1):'≈ 1:1 на экране';
+
+  /* ruler: 10 mm ticks in the same scale as the preview */
+  const rb=$('rulerbar'), unit=(m.W>120?50:10), px=unit*scale*(96/25.4), n=Math.max(2,Math.floor(480/px));
+  rb.style.width=(px*n)+'px';
+  rb.innerHTML='<u></u>'+Array.from({length:n-1},(_,i)=>'<i style="left:'+((i+1)/n*100)+'%"></i>').join('');
+  $('rulerlab').textContent='деление '+unit+' мм';
+
+  /* spec */
+  const rows=[
+    ['Борозд',c.N,''],
+    ['Шаг поля',nf(m.pitch,2)+' мм',''],
+    ['Контур (белая линия)',nf(m.w,2)+' мм',chk(m.w)],
+    ['Перемычка, плотный склон',nf(m.web,2)+' мм',chk(m.web)],
+    ['Полоса, открытый склон',nf(m.band,2)+' мм',''],
+    ['Скругление силуэта',nf(c.k.R*c.W,2)+' мм',''],
+    ['Скругление борозд',nf(m.r1,2)+' → '+nf(m.rN,2)+' мм',''],
+    ['Высота знака',nf(m.H,2)+' мм','']
+  ];
+  $('spectbl').innerHTML=rows.map(r=>'<tr><th>'+r[0]+'</th><td>'+r[1]+
+    (r[2]?' '+r[2]:'')+'</td></tr>').join('');
+
+  /* verdict */
+  const thin=Math.min(m.w,m.web), okAll=thin>=S.min-1e-9;
+  const wMin=minWidth(c.k.nMin,S.min,c.k);
+  let vd='';
+  if(!okAll){
+    vd='<div class="note alert"><b>Тоньше предела технологии.</b> Минимальный элемент '+nf(thin,2)+
+      ' мм при допустимых '+nf(S.min,2)+' мм. Уменьшите число борозд до '+Math.max(1,c.nMax)+
+      ' или увеличьте знак до '+nf(minWidth(c.N,S.min,c.k),0)+' мм.</div>';
+  } else if(c.nMax<c.nOpt && S.auto){
+    vd='<div class="note"><b>Плотность ограничена печатью.</b> Оптика просит '+c.nOpt+
+      ' борозд, технология позволяет '+c.nMax+'. Знак сохраняет пропорции, борозды становятся крупнее.</div>';
+  } else {
+    vd='<div class="note">Все элементы проходят по технологии. Минимальный размер знака для «'+
+      TECH[S.tech].n.toLowerCase()+'» — <b>'+nf(wMin,0)+' мм</b> в ширину.</div>';
+  }
+  $('verdict').innerHTML=vd;
+
+  /* derivation */
+  $('deriv').innerHTML=
+    '<div>оптика &nbsp;1,35·√'+nf(c.W,0)+' → <span'+(S.auto&&c.nAuto===c.nOpt?' class="win"':'')+'>'+c.nOpt+'</span></div>'+
+    '<div>печать &nbsp;контур ≥ '+nf(S.min,2)+' мм → <span'+(S.auto&&c.nAuto===c.nMax?' class="win"':'')+'>'+
+      (c.nMax<1?'—':c.nMax)+'</span></div>'+
+    '<div>принято &nbsp;<span class="win">'+c.N+'</span>'+(S.auto?'':' · задано вручную')+'</div>';
+  $('ncap').textContent=S.auto?'подобрано автоматически':'ручной режим';
+  $('dec').disabled=S.auto; $('inc').disabled=S.auto;
+
+  /* export */
+  const out=svgOf(m,ink,'width="'+F(m.W)+'mm" height="'+F(m.H)+'mm"');
+  S.svg=out;
+  S.file='rubitech-'+nf(m.W,0)+'mm-'+c.N+(S.color==='#000000'?'':'-eb5036')+(S.neg?'-inv':'')+'.svg';
+  $('src').textContent=out;
+  $('fname').textContent=S.file+' · '+(out.length/1024).toFixed(1)+' КБ · один контур, без обводок';
+
+  /* mini preview inside the size card — fixed display height, so the decision reads as density */
+  $('mini-art').innerHTML=svgOf(m,ink,'height="74"');
+  $('minipv').classList.toggle('inv',S.neg);
+  /* traffic light: green in the working band, red below 6 and above 21 grooves */
+  const hot=c.N<BAND.lo||c.N>BAND.hi;
+  const mn=$('mini-n'), changed=mn.textContent!==String(c.N);
+  mn.textContent=c.N;
+  mn.classList.toggle('hot',hot);
+  if(changed&&!hot){
+    mn.classList.add('live');
+    clearTimeout(window.__bump); window.__bump=setTimeout(()=>mn.classList.remove('live'),420);
+  } else if(hot) mn.classList.remove('live');
+  $('wr').classList.toggle('hot',hot);
+  paintBand(c.k);
+  $('mini-meta').innerHTML='шаг <em>'+nf(m.pitch,2)+'</em> · контур <em>'+nf(m.w,2)+'</em> мм<br>'+
+    (S.auto?(c.nMax<c.nOpt?'ограничение технологии':'оптический закон'):'задано вручную')+
+    ' · показан на одной высоте';
+
+  /* identity strip */
+  drawStrip(c.k,S.color==='#000000'?'#000':S.color);
+  $('ver').textContent='W='+nf(m.W,1)+' мм · N='+c.N+' · шаг '+nf(m.pitch,2)+' мм';
+}
+let bandKey='';
+function paintBand(k){
+  const A=3,B=300,key=S.min+'|'+JSON.stringify(k);
+  if(key===bandKey)return; bandKey=key;
+  const nAt=x=>Math.max(3,Math.min(optN(x,k),maxN(x,S.min,k)));
+  let lo=null,hi=null;
+  for(let x=A;x<=B;x++){const n=nAt(x); if(lo===null&&n>=BAND.lo)lo=x; if(n<=BAND.hi)hi=x;}
+  const pc=x=>Math.max(0,Math.min(100,(x-A)/(B-A)*100));
+  const p1=lo===null?100:pc(lo), p2=hi===null?0:pc(hi);
+  $('band').style.background='linear-gradient(90deg,var(--accent) 0 '+p1+'%,var(--live) '+p1+'% '+p2+
+    '%,var(--accent) '+p2+'% 100%)';
+  $('band-lo').innerHTML=lo===null?'борозд всегда меньше '+BAND.lo:
+    'меньше <b>'+lo+' мм</b> — борозд &lt; '+BAND.lo;
+  $('band-hi').innerHTML=hi===null||hi>=B?'':'больше <b>'+hi+' мм</b> — борозд &gt; '+BAND.hi;
+}
+function chk(x){
+  const s=x>=S.min?'ok':(x>=S.min*0.85?'warn':'bad');
+  return '<span class="state '+s+'">'+(s==='ok'?'в допуске':s==='warn'?'на грани':'тонко')+'</span>';
+}
+let stripKey='';
+function drawStrip(k,ink){
+  const sizes=[10,18,32,60,110,200];
+  const key=sizes.join()+JSON.stringify(k)+ink;
+  if(key===stripKey)return; stripKey=key;
+  $('strip').innerHTML=sizes.map(w=>{
+    const n=Math.max(3,Math.min(optN(w,k),maxN(w,0.05,k)));
+    const m=buildMark(w,n,k);
+    return '<div class="spec-cell"><div class="art">'+svgOf(m,ink,'height="76"')+
+      '</div><div class="cap"><b>'+w+' мм</b>'+n+' борозд<br>контур '+nf(m.w,2)+' мм</div></div>';
+  }).join('');
+}
+
+/* ---------------- events ---------------- */
+function setW(x){S.W=Math.max(3,Math.min(600,x));$('w').value=S.W;$('wr').value=Math.min(300,S.W);draw();}
+$('w').addEventListener('input',e=>{const x=parseFloat(e.target.value);if(!isNaN(x)){S.W=Math.max(3,Math.min(600,x));$('wr').value=Math.min(300,S.W);draw();}});
+$('wr').addEventListener('input',e=>setW(parseFloat(e.target.value)));
+$('presets').addEventListener('click',e=>{const b=e.target.closest('[data-w]');if(b)setW(parseFloat(b.dataset.w));});
+$('tech').addEventListener('change',e=>{S.tech=+e.target.value;S.min=TECH[S.tech].v;$('minline').value=S.min;draw();});
+$('minline').addEventListener('input',e=>{const x=parseFloat(e.target.value);if(!isNaN(x)&&x>0){S.min=x;draw();}});
+$('mAuto').addEventListener('click',()=>{S.auto=true;$('mAuto').setAttribute('aria-pressed','true');
+  $('mMan').setAttribute('aria-pressed','false');draw();});
+$('mMan').addEventListener('click',()=>{S.auto=false;$('mMan').setAttribute('aria-pressed','true');
+  $('mAuto').setAttribute('aria-pressed','false');draw();});
+$('dec').addEventListener('click',()=>{S.N=Math.max(1,S.N-1);draw();});
+$('inc').addEventListener('click',()=>{S.N=Math.min(40,S.N+1);draw();});
+$('cBlack').addEventListener('click',()=>{S.color='#000000';$('cBlack').setAttribute('aria-pressed','true');
+  $('cOrange').setAttribute('aria-pressed','false');draw();});
+$('cOrange').addEventListener('click',()=>{S.color='#EB5036';$('cOrange').setAttribute('aria-pressed','true');
+  $('cBlack').setAttribute('aria-pressed','false');draw();});
+$('pPos').addEventListener('click',()=>{S.neg=false;$('pPos').setAttribute('aria-pressed','true');
+  $('pNeg').setAttribute('aria-pressed','false');draw();});
+$('pNeg').addEventListener('click',()=>{S.neg=true;$('pNeg').setAttribute('aria-pressed','true');
+  $('pPos').setAttribute('aria-pressed','false');draw();});
+ADV.forEach(a=>$('k_'+a[0]).addEventListener('input',e=>{
+  const x=parseFloat(e.target.value); if(!isNaN(x)){S.k[a[0]]=x;draw();}}));
+$('kreset').addEventListener('click',()=>{S.k=Object.assign({},K);
+  ADV.forEach(a=>$('k_'+a[0]).value=S.k[a[0]]);draw();});
+window.addEventListener('resize',()=>{clearTimeout(window.__rt);window.__rt=setTimeout(draw,120);});
+
+/* copy + download */
+$('cp').addEventListener('click',async()=>{
+  const b=$('cp'), old=b.textContent;
+  try{await navigator.clipboard.writeText(S.svg);b.textContent='Скопировано';}
+  catch(e){b.textContent='Выделите код ниже';}
+  setTimeout(()=>b.textContent=old,1600);
+});
+let DL=null;
+if(window.claude&&typeof window.claude.use==='function'){
+  window.claude.use('downloads').then(d=>{DL=d;}).catch(()=>{});
+}
+function localSave(){
+  const url=URL.createObjectURL(new Blob([S.svg],{type:'image/svg+xml'}));
+  const a=document.createElement('a');a.href=url;a.download=S.file;document.body.appendChild(a);
+  a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+$('dl').addEventListener('click',async()=>{
+  const b=$('dl'), old='Скачать SVG';
+  if(DL){
+    try{await DL.save({filename:S.file,data:S.svg});b.textContent='Сохранено';}
+    catch(err){b.textContent=(err&&err.code==='declined')?'Отменено':'Не удалось сохранить';}
+  } else { localSave(); b.textContent='Готово'; }
+  setTimeout(()=>b.textContent=old,1800);
+});
+
+S.min=TECH[1].v; draw();
+})();
+</script>
+</body></html>
