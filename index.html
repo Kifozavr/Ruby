@@ -299,7 +299,7 @@ footer{color:var(--muted);font-size:12px;margin-top:28px;padding-top:16px;border
             <label class="lab">Цвет знака</label>
             <div class="swatches" role="group">
               <button class="sw" id="cBlack" aria-pressed="true"><i style="background:#000000"></i>Чёрный<em>#000000</em></button>
-              <button class="sw" id="cOrange" aria-pressed="false"><i style="background:#EB5036"></i>Оранжевый<em>#EB5036</em></button>
+              <button class="sw" id="cOrange" aria-pressed="false"><i style="background:#E74C30"></i>Оранжевый<em>#E74C30</em></button>
             </div>
             <div class="seg" role="group" style="margin-top:9px">
               <button id="pPos" aria-pressed="true">На светлом</button>
@@ -652,7 +652,7 @@ function draw(){
   /* export */
   const out=svgOf(m,ink,'width="'+F(m.W)+'mm" height="'+F(m.H)+'mm"');
   S.svg=out;
-  S.file='rubitech-'+nf(m.W,0)+'mm-'+c.N+(S.color==='#000000'?'':'-eb5036')+(S.neg?'-inv':'')+'.svg';
+  S.file='rubitech-'+nf(m.W,0)+'mm-'+c.N+(S.color==='#000000'?'':'-e74c30')+(S.neg?'-inv':'')+'.svg';
   $('src').textContent=out;
   $('fname').textContent=S.file+' · '+(out.length/1024).toFixed(1)+' КБ · один контур, без обводок';
 
@@ -725,7 +725,7 @@ $('dec').addEventListener('click',()=>{S.N=Math.max(1,S.N-1);draw();});
 $('inc').addEventListener('click',()=>{S.N=Math.min(40,S.N+1);draw();});
 $('cBlack').addEventListener('click',()=>{S.color='#000000';$('cBlack').setAttribute('aria-pressed','true');
   $('cOrange').setAttribute('aria-pressed','false');draw();});
-$('cOrange').addEventListener('click',()=>{S.color='#EB5036';$('cOrange').setAttribute('aria-pressed','true');
+$('cOrange').addEventListener('click',()=>{S.color='#E74C30';$('cOrange').setAttribute('aria-pressed','true');
   $('cBlack').setAttribute('aria-pressed','false');draw();});
 $('pPos').addEventListener('click',()=>{S.neg=false;$('pPos').setAttribute('aria-pressed','true');
   $('pNeg').setAttribute('aria-pressed','false');draw();});
